@@ -1,6 +1,9 @@
 # Data folder (scraped docs)
 Backend/data/
 
+# Chroma vector database
+Backend/chroma_db/
+
 # Virtual environment
 Backend/venv/
 
