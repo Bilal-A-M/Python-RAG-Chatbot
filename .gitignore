@@ -1,0 +1,13 @@
+# Data folder (scraped docs)
+Backend/data/
+
+# Virtual environment
+Backend/venv/
+
+# Environment variables
+Backend/.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
