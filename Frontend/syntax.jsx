@@ -1,5 +1,4 @@
-// Tiny Python syntax highlighter — handles enough for asyncio-style snippets.
-// Walks the source and emits {type, text} segments; React renders <span class="tok-...">.
+import React from 'react';
 
 const PY_KEYWORDS = new Set([
   'False','None','True','and','as','assert','async','await','break','class',
@@ -125,4 +124,4 @@ function highlightPython(src) {
   });
 }
 
-window.highlightPython = highlightPython;
+export { highlightPython };

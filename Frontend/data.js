@@ -1,7 +1,7 @@
 // Seed content for the RAG chatbot demo.
 // Citations are referenced inline in the answer text as [[N]] tokens.
 
-window.PYDOCS_DATA = {
+const PYDOCS_DATA = {
   conversations: [
     { id: 'c1', title: 'asyncio.gather vs TaskGroup', ago: '2m',  active: true },
     { id: 'c2', title: 'Dataclasses with slots',       ago: '1h'  },
@@ -86,3 +86,5 @@ window.PYDOCS_DATA = {
     "How do I add a timeout to a TaskGroup?",
   ],
 };
+
+export default PYDOCS_DATA;

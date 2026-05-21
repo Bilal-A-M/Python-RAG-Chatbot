@@ -1,6 +1,5 @@
-// Shared chat components: Citation chip, CodeBlock, Drawer, Sidebar, Topbar, Composer.
-
-const { useState, useEffect, useRef, useCallback } = React;
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { highlightPython } from './syntax.jsx';
 
 // ── icons (tiny inline SVGs) ───────────────────────────────────────────────
 const Icon = {
@@ -203,7 +202,7 @@ function Sidebar({ conversations }) {
 }
 
 // ── Topbar ────────────────────────────────────────────────────────────────
-function Topbar({ started }) {
+function Topbar({ started, title }) {
   return (
     <header className="topbar">
       <span className="brand">
@@ -212,7 +211,7 @@ function Topbar({ started }) {
       </span>
       <span className="crumb">
         <span style={{color:'var(--text-4)', margin:'0 6px'}}>/</span>
-        <b>{started ? 'asyncio.gather vs TaskGroup' : 'new chat'}</b>
+        <b>{started ? (title || 'new chat') : 'new chat'}</b>
       </span>
       <span className="grow" />
       <button className="icon-btn" title="Search">{Icon.search}</button>
@@ -277,4 +276,4 @@ function Composer({ onSubmit, busy }) {
   );
 }
 
-Object.assign(window, { Cite, CodeBlock, CitationDrawer, Sidebar, Topbar, Composer, Icon });
+export { Cite, CodeBlock, CitationDrawer, Sidebar, Topbar, Composer, Icon };

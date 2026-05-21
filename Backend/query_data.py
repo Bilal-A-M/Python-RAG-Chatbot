@@ -1,5 +1,7 @@
 import sys
 from pathlib import Path
+
+
 from dotenv import load_dotenv
 
 from langchain_chroma import Chroma

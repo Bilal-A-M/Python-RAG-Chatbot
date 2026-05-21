@@ -1,6 +1,5 @@
-// Markdown-lite renderer for the assistant's answer.
-// Blocks: ``` code fences, "- " bullets, "**bold**" paragraphs.
-// Inline: `inline code`, **bold**, [[N]] citation tokens.
+import React from 'react';
+import { Cite } from './components.jsx';
 
 function parseBlocks(text) {
   // Split on blank line; preserve code fences as single blocks.
@@ -65,5 +64,4 @@ function renderInline(text, ctx) {
   });
 }
 
-window.parseBlocks = parseBlocks;
-window.renderInline = renderInline;
+export { parseBlocks, renderInline };

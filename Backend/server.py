@@ -12,7 +12,6 @@ Endpoints:
 import os
 import re
 from pathlib import Path
-from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
@@ -28,13 +27,19 @@ load_dotenv()
 CHROMA_DIR = Path("chroma_db")
 TOP_K = 3
 
-SYSTEM_PROMPT = (
-    "You are a Python documentation assistant. Answer only from the provided "
-    "documentation context. When referencing a specific concept, cite the source "
-    "chunk using [[1]], [[2]], or [[3]] inline. "
-    "Do NOT generate new code — only quote short examples from the docs. "
-    "If the answer is not in the context, say so."
-)
+SYSTEM_PROMPT = """You are a Python documentation assistant. Your only job is to help users \
+understand Python based on the official Python documentation.
+
+Rules you must follow:
+- Do NOT generate new code. You may only quote short example snippets that \
+appear directly in the provided context to illustrate a concept.
+- If the user asks you to generate, write, or create code, respond with: \
+"I can't generate code for you. I can only explain concepts and show examples from the Python documentation."
+- Explain concepts clearly so the user can learn and understand.
+- When referencing a specific concept, cite the source chunk inline using [[1]], [[2]], or [[3]].
+- If the answer is not found in the context below, say: \
+"I don't have enough information in the Python docs to answer that."
+- You may use the conversation history to answer follow-up questions."""
 
 CONTEXT_TEMPLATE = """Context from the Python documentation:
 {context}
@@ -79,17 +84,12 @@ def _build_citation(n: int, doc) -> dict:
     """Build a citation dict from a LangChain Document."""
     source = doc.metadata.get("source", "")
 
-    # Parse URL to extract path and anchor
-    parsed = urlparse(source)
-    url_path = parsed.path  # e.g. /3/library/asyncio.html
-    anchor = parsed.fragment  # e.g. module-asyncio (without #)
+    # Source is a local file path like data/library/asyncio.txt
+    # Strip everything up to and including "data/" and swap .txt → .html
+    path_match = re.search(r"data[/\\](.+)", source)
+    rel_path = path_match.group(1) if path_match else source
+    rel_path = rel_path.replace(".txt", ".html")
 
-    # Strip everything up to and including "/3/" to get a relative docs path
-    # e.g. /3/library/asyncio.html  →  library/asyncio.html
-    path_match = re.search(r"/3/(.+)", url_path)
-    rel_path = path_match.group(1) if path_match else url_path.lstrip("/")
-
-    anchor_str = f"#{anchor}" if anchor else ""
     title = _path_to_title(rel_path)
 
     content = doc.page_content
@@ -100,8 +100,8 @@ def _build_citation(n: int, doc) -> dict:
         "n": n,
         "title": title,
         "path": rel_path,
-        "anchor": anchor_str,
-        "version": "Python 3.13",
+        "anchor": "",
+        "version": "Python 3.14",
         "quote": quote,
         "highlight": "",
         "excerpt": excerpt,
@@ -194,6 +194,6 @@ if __name__ == "__main__":
     if not CHROMA_DIR.exists():
         print("WARNING: Vector database not found at chroma_db/. Run create_database.py first.")
 
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5001))
     print(f"Starting server on http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=True)

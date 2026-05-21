@@ -1,10 +1,23 @@
-// Main app — assembles layout, streams the assistant answer, wires tweaks.
-// Real API calls go to http://localhost:5000/api/query (Backend/server.py).
+import React, { useState as useS, useEffect as useE, useRef as useR, useMemo as useM, useCallback as useC } from 'react';
+import ReactDOM from 'react-dom/client';
+import './styles.css';
+import PYDOCS_DATA from './data.js';
+import { CodeBlock, CitationDrawer, Topbar, Composer, Icon } from './components.jsx';
+import { parseBlocks, renderInline } from './markdown.jsx';
+import { useTweaks, TweaksPanel, TweakSection, TweakColor, TweakRadio, TweakSelect, TweakButton } from './tweaks-panel.jsx';
 
-const { useState: useS, useEffect: useE, useRef: useR, useMemo: useM, useCallback: useC } = React;
+const TWEAK_DEFAULTS = {
+  accent: 'amber',
+  darkness: 'midnight',
+  fontMode: 'sans',
+  sidebar: true,
+  citationStyle: 'drawer',
+  density: 'regular',
+  bubbleStyle: 'flat',
+};
 
 function App() {
-  const [t, setTweak] = useTweaks(window.TWEAK_DEFAULTS);
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
 
   // Apply theme attrs to <html> so CSS vars switch.
   useE(() => {
@@ -16,7 +29,7 @@ function App() {
   }, [t.darkness, t.accent, t.density, t.fontMode]);
 
   // ── conversation state ─────────────────────────────────────────────
-  const data = window.PYDOCS_DATA;
+  const data = PYDOCS_DATA;
   const [started, setStarted] = useS(false);
   const [messages, setMessages] = useS([]);
   const [progress, setProgress] = useS(0);   // chars revealed for seeded streaming
@@ -27,6 +40,7 @@ function App() {
 
   // Multi-turn chat history as [[question, answer], ...]
   const chatHistoryRef = useR([]);
+  const seededModeRef = useR(false);
 
   // Per-message citations: maps messageId -> citationsArray
   const msgCitationsRef = useR({});
@@ -35,6 +49,7 @@ function App() {
 
   // ── kick off the seeded asyncio Q&A ──────────────────────────────────
   const startSeededConversation = useC(() => {
+    seededModeRef.current = true;
     setStarted(true);
     setProgress(0);
     setStreaming(true);
@@ -115,8 +130,19 @@ function App() {
     };
   }, [activeCite, openDrawer, t.citationStyle, data]);
 
-  // Enter on the start screen launches the demo.
-  useEnterToStart(!started, startSeededConversation);
+  // Open an empty chat — no seeded content.
+  const startEmpty = useC(() => {
+    seededModeRef.current = false;
+    setStarted(true);
+    setStreaming(false);
+    setProgress(0);
+    setMessages([]);
+    chatHistoryRef.current = [];
+    msgCitationsRef.current = {};
+  }, []);
+
+  // Enter on the start screen opens an empty chat.
+  useEnterToStart(!started, startEmpty);
 
   // ── real API submit ───────────────────────────────────────────────────
   const submit = useC(async (text) => {
@@ -132,7 +158,7 @@ function App() {
     ]);
 
     try {
-      const res = await fetch('http://localhost:5000/api/query', {
+      const res = await fetch('http://localhost:5001/api/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -195,12 +221,11 @@ function App() {
          data-bubble={t.bubbleStyle}>
 
       <main className="main">
-        <Topbar started={started} />
+        <Topbar started={started} title={messages.find(m => m.role === 'user')?.text} />
 
         {!started ? (
           <StartScreen
-            onStart={startSeededConversation}
-            seededQuestion={data.userQuestion}
+            onStart={startEmpty}
           />
         ) : (
           <div className="chat-scroll" ref={scrollRef}>
@@ -215,7 +240,7 @@ function App() {
               ))}
 
               {/* Show follow-ups + footnote-style citations only when the seeded answer finishes */}
-              {!seededStreaming && messages.length > 0 && (
+              {seededModeRef.current && !seededStreaming && messages.length > 0 && (
                 <>
                   {t.citationStyle === 'footnote' && (
                     <FootnoteList citations={data.citations} openDrawer={(n) => openDrawer(n, 'm-a1')} />
@@ -274,6 +299,7 @@ function App() {
         <TweakSection label="Demo">
           <TweakButton label={started ? 'Back to start screen' : 'Start seeded demo'} onClick={() => {
             if (started) {
+              seededModeRef.current = false;
               setStarted(false);
               setStreaming(false);
               setProgress(0);
@@ -298,13 +324,7 @@ function nowStamp() {
 }
 
 // ── StartScreen ──────────────────────────────────────────────────────────
-function StartScreen({ onStart, seededQuestion }) {
-  const examples = [
-    { q: seededQuestion, badge: 'seeded demo', seeded: true },
-    { q: "How do I add a timeout to an asyncio task?", badge: 'asyncio' },
-    { q: "What's the difference between @cache and @lru_cache?", badge: 'functools' },
-    { q: "Show me a dataclass with slots and frozen=True", badge: 'dataclasses' },
-  ];
+function StartScreen({ onStart }) {
   return (
     <div className="start-scroll">
       <div className="start">
@@ -343,18 +363,7 @@ function StartScreen({ onStart, seededQuestion }) {
           <span className="start-cta-arrow">→</span>
         </button>
         <div className="start-cta-hint">
-          Press <b>Enter</b> to launch the seeded asyncio walkthrough
-        </div>
-
-        <div className="start-examples-label">Try an example</div>
-        <div className="start-examples">
-          {examples.map((ex, i) => (
-            <button key={i} className="start-example" onClick={onStart}>
-              <span className="start-example-badge" data-seeded={ex.seeded ? '1' : '0'}>{ex.badge}</span>
-              <span className="start-example-q">{ex.q}</span>
-              <span className="start-example-arrow">→</span>
-            </button>
-          ))}
+          Press <b>Enter</b> to start
         </div>
       </div>
     </div>

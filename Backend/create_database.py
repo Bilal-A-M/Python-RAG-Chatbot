@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shutil
 from dotenv import load_dotenv
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -44,12 +45,10 @@ def split_documents(docs):
 def create_vector_database(chunks):
     """Embed chunks and store them in a Chroma vector database."""
     print("Creating vector database...")
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    db = Chroma.from_documents(
-        documents=chunks,
-        embedding=embeddings,
-        persist_directory=str(CHROMA_DIR),
-    )
+    if (os.path.exists(CHROMA_DIR)):
+        shutil.rmtree(CHROMA_DIR)
+    embeddings = OpenAIEmbeddings()
+    db = Chroma.from_documents(chunks, embeddings, persist_directory=str(CHROMA_DIR))
     print(f"Vector database saved to {CHROMA_DIR}/")
     return db
 
@@ -60,8 +59,7 @@ if __name__ == "__main__":
         exit(1)
 
     if CHROMA_DIR.exists():
-        print(f"'{CHROMA_DIR}' already exists. Delete it to rebuild.")
-        exit(0)
+        print(f"'{CHROMA_DIR}' already exists. Deleting and rebuilding...")
 
     docs = load_documents()
     chunks = split_documents(docs)
